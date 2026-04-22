@@ -13,6 +13,7 @@ import { Role } from '@/types';
 const menuItems: Record<Role, { href: string; icon: React.ReactNode; label: string }[]> = {
   admin: [
     { href: '/admin/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, label: 'Dashboard' },
+    { href: '/admin/users', icon: <Users className="w-5 h-5" />, label: 'Users' },
     { href: '/admin/flats', icon: <Building2 className="w-5 h-5" />, label: 'Flats' },
     { href: '/admin/tenants', icon: <Users className="w-5 h-5" />, label: 'Tenants' },
     { href: '/admin/payments', icon: <CreditCard className="w-5 h-5" />, label: 'Payments' },

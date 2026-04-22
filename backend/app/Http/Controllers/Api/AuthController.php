@@ -88,6 +88,28 @@ class AuthController extends Controller
         ]);
     }
 
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id],
+            'phone' => ['nullable', 'string', 'max:30'],
+        ]);
+
+        $user->update([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'phone' => $data['phone'] ?? null,
+        ]);
+
+        return response()->json([
+            'message' => 'Profile updated successfully.',
+            'user' => FrontendData::user($user->fresh('tenantProfile.flat')),
+        ]);
+    }
+
     public function logout(Request $request): JsonResponse
     {
         $token = $request->bearerToken();

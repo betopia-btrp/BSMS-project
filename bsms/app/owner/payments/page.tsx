@@ -4,6 +4,7 @@ import { useAuthStore } from '@/lib/store/authStore';
 import { Card, Badge, Table, Th, Td, KPICard } from '@/components/ui';
 import { DollarSign, TrendingUp, Download } from 'lucide-react';
 import { formatCurrency, getStatusColor, formatDate } from '@/lib/utils';
+import { downloadPaymentReceipt } from '@/lib/pdf';
 
 export default function OwnerPayments() {
   const { payments } = useAppStore();
@@ -39,7 +40,7 @@ export default function OwnerPayments() {
                 <Td>{p.month}</Td>
                 <Td>{p.paidDate ? formatDate(p.paidDate) : '—'}</Td>
                 <Td><Badge className={getStatusColor(p.status)}>{p.status}</Badge></Td>
-                <Td>{p.status === 'paid' && <button className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-500"><Download className="w-4 h-4" /></button>}</Td>
+                <Td>{p.status === 'paid' && <button onClick={() => downloadPaymentReceipt(p)} className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-500"><Download className="w-4 h-4" /></button>}</Td>
               </tr>
             ))}
           </tbody>

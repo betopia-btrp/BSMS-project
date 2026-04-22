@@ -7,6 +7,7 @@ import { Card, Badge, Button, Modal, Table, Th, Td } from '@/components/ui';
 import { CreditCard, Download, CheckCircle, AlertCircle, Building2, User } from 'lucide-react';
 import { formatCurrency, getStatusColor, formatDate } from '@/lib/utils';
 import { Payment } from '@/types';
+import { downloadPaymentReceipt } from '@/lib/pdf';
 
 type PayMethod = 'bkash' | 'nagad' | 'card';
 
@@ -121,7 +122,7 @@ export default function TenantPayments() {
                 <Td>{p.month}</Td>
                 <Td className="capitalize">{p.method || '—'}</Td>
                 <Td><Badge className={getStatusColor(p.status)}>{p.status}</Badge></Td>
-                <Td>{p.status === 'paid' && <button className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-500"><Download className="w-4 h-4" /></button>}</Td>
+                <Td>{p.status === 'paid' && <button onClick={() => downloadPaymentReceipt(p)} className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-500"><Download className="w-4 h-4" /></button>}</Td>
               </tr>
             ))}
           </tbody>

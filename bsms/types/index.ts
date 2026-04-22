@@ -8,6 +8,12 @@ export interface User {
   phone?: string;
   avatar?: string;
   flatId?: string;
+  flatNumber?: string;
+  nid?: string;
+  emergencyContact?: string;
+  moveInDate?: string;
+  status?: 'active' | 'inactive' | null;
+  isVerified?: boolean;
   createdAt: string;
 }
 

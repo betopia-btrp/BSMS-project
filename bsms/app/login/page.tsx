@@ -136,8 +136,8 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-slate-500 text-sm mt-6">
-          Need an account?{' '}
-          <Link href="/register" className="text-indigo-400 hover:text-indigo-300 transition-colors font-medium">Register here</Link>
+          Account access is created by your building admin.{' '}
+          <Link href="/register" className="text-indigo-400 hover:text-indigo-300 transition-colors font-medium">Learn more</Link>
         </p>
       </div>
     </div>

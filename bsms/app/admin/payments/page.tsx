@@ -2,9 +2,10 @@
 import { useState } from 'react';
 import { useAppStore } from '@/lib/store/appStore';
 import { Card, Badge, Table, Th, Td, EmptyState, Button, KPICard } from '@/components/ui';
-import { CreditCard, Search, Download, Eye, Filter, TrendingUp, DollarSign, AlertCircle } from 'lucide-react';
+import { CreditCard, Search, Download, Eye, TrendingUp, DollarSign, AlertCircle } from 'lucide-react';
 import { formatCurrency, getStatusColor, formatDate } from '@/lib/utils';
 import { Payment } from '@/types';
+import { downloadPaymentReceipt } from '@/lib/pdf';
 
 export default function AdminPayments() {
   const { payments } = useAppStore();
@@ -120,7 +121,7 @@ export default function AdminPayments() {
                 <Td>
                   <div className="flex items-center gap-1.5">
                     <button onClick={() => setViewPayment(p)} className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500 transition-colors"><Eye className="w-4 h-4" /></button>
-                    {p.status === 'paid' && <button className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-500 transition-colors"><Download className="w-4 h-4" /></button>}
+                    {p.status === 'paid' && <button onClick={() => downloadPaymentReceipt(p)} className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-500 transition-colors"><Download className="w-4 h-4" /></button>}
                   </div>
                 </Td>
               </tr>
@@ -163,7 +164,7 @@ export default function AdminPayments() {
             </div>
             <div className="p-6 pt-0 flex gap-3">
               <Button variant="secondary" onClick={() => setViewPayment(null)} className="flex-1">Close</Button>
-              {viewPayment.status === 'paid' && <Button icon={<Download className="w-4 h-4" />} className="flex-1">Download Receipt</Button>}
+              {viewPayment.status === 'paid' && <Button icon={<Download className="w-4 h-4" />} className="flex-1" onClick={() => downloadPaymentReceipt(viewPayment)}>Download Receipt</Button>}
             </div>
           </div>
         </div>

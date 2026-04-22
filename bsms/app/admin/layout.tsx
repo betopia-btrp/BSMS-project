@@ -6,6 +6,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 
 const pageTitles: Record<string, string> = {
   '/admin/dashboard': 'Dashboard',
+  '/admin/users': 'User Management',
   '/admin/flats': 'Flat Management',
   '/admin/tenants': 'Tenant Management',
   '/admin/payments': 'Payment Management',
@@ -19,13 +20,15 @@ const pageTitles: Record<string, string> = {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, hasHydrated } = useAuthStore();
 
   useEffect(() => {
+    if (!hasHydrated) return;
     if (!isAuthenticated || !user) { router.replace('/login'); return; }
     if (user.role !== 'admin') { router.replace('/' + user.role + '/dashboard'); }
-  }, [isAuthenticated, user, router]);
+  }, [hasHydrated, isAuthenticated, user, router]);
 
+  if (!hasHydrated) return null;
   if (!isAuthenticated || !user || user.role !== 'admin') return null;
 
   const title = pageTitles[pathname] || 'Admin Panel';

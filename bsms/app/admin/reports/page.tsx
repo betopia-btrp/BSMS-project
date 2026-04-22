@@ -3,10 +3,12 @@ import { useState } from 'react';
 import { useAppStore } from '@/lib/store/appStore';
 import { useToast } from '@/components/ToastProvider';
 import { Card, CardHeader, CardBody, Button, KPICard } from '@/components/ui';
-import { BarChart3, Download, DollarSign, Users, Wrench, UserCheck, Filter } from 'lucide-react';
+import { BarChart3, Download, DollarSign, Users, Wrench } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
 import { paymentTrends } from '@/lib/mockData';
+import { downloadPdfDocument } from '@/lib/pdf';
+import { Payment, MaintenanceTicket, Visitor } from '@/types';
 
 export default function AdminReports() {
   const { payments, tickets, visitors, flats, tenants } = useAppStore();
@@ -14,7 +16,119 @@ export default function AdminReports() {
   const [dateFrom, setDateFrom] = useState('2025-01-01');
   const [dateTo, setDateTo] = useState('2025-12-31');
 
-  const handleExport = (type: string) => toast(`Exporting ${type} report as PDF...`);
+  const inRange = (value?: string) => {
+    if (!value) return false;
+    const current = new Date(value).getTime();
+    return current >= new Date(dateFrom).getTime() && current <= new Date(dateTo).getTime();
+  };
+
+  const paymentReportRows = payments.filter((payment) => inRange(payment.paidDate || payment.dueDate));
+  const maintenanceReportRows = tickets.filter((ticket) => inRange(ticket.createdAt));
+  const visitorReportRows = visitors.filter((visitor) => inRange(visitor.visitDate || visitor.entryTime));
+
+  const handleExport = (type: 'payment' | 'maintenance' | 'visitor' | 'occupancy') => {
+    const subtitle = `Date range: ${dateFrom} to ${dateTo}`;
+
+    if (type === 'payment') {
+      downloadPdfDocument(
+        `payment-report-${dateFrom}-to-${dateTo}`,
+        'BSMS Payment Report',
+        [
+          {
+            heading: 'Summary',
+            lines: [
+              `Total records: ${paymentReportRows.length}`,
+              `Paid amount: ${formatCurrency(paymentReportRows.filter((item) => item.status === 'paid').reduce((sum, item) => sum + item.amount, 0)).replace('৳', 'BDT ')}`,
+              `Admin revenue: ${formatCurrency(paymentReportRows.filter((item) => item.recipient === 'admin' && item.status === 'paid').reduce((sum, item) => sum + item.amount, 0)).replace('৳', 'BDT ')}`,
+              `Owner rent collected: ${formatCurrency(paymentReportRows.filter((item) => item.recipient === 'owner' && item.status === 'paid').reduce((sum, item) => sum + item.amount, 0)).replace('৳', 'BDT ')}`,
+            ],
+          },
+          {
+            heading: 'Payment Details',
+            lines: paymentReportRows.length > 0
+              ? paymentReportRows.map((item: Payment) => (
+                  `${item.invoiceNumber} | ${item.tenantName} | Flat ${item.flatNumber} | ${item.month} | ${item.status} | ${formatCurrency(item.amount).replace('৳', 'BDT ')}`
+                ))
+              : ['No payment records found in the selected date range.'],
+          },
+        ],
+        subtitle
+      );
+      toast('Payment report downloaded');
+      return;
+    }
+
+    if (type === 'maintenance') {
+      downloadPdfDocument(
+        `maintenance-report-${dateFrom}-to-${dateTo}`,
+        'BSMS Maintenance Report',
+        [
+          {
+            heading: 'Summary',
+            lines: maintenanceByCategory.map((item) => `${item.name}: ${item.resolved}/${item.total} resolved`),
+          },
+          {
+            heading: 'Ticket Details',
+            lines: maintenanceReportRows.length > 0
+              ? maintenanceReportRows.map((item: MaintenanceTicket) => (
+                  `${item.ticketId} | ${item.tenantName} | Flat ${item.flatNumber} | ${item.category} | ${item.priority} | ${item.status}`
+                ))
+              : ['No maintenance tickets found in the selected date range.'],
+          },
+        ],
+        subtitle
+      );
+      toast('Maintenance report downloaded');
+      return;
+    }
+
+    if (type === 'visitor') {
+      downloadPdfDocument(
+        `visitor-report-${dateFrom}-to-${dateTo}`,
+        'BSMS Visitor Report',
+        [
+          {
+            heading: 'Summary',
+            lines: visitorStats.map((item) => `${item.name}: ${item.value}`),
+          },
+          {
+            heading: 'Visitor Details',
+            lines: visitorReportRows.length > 0
+              ? visitorReportRows.map((item: Visitor) => (
+                  `${item.name} | Flat ${item.flatNumber} | ${item.type} | ${item.status} | ${item.visitDate || 'N/A'}`
+                ))
+              : ['No visitor records found in the selected date range.'],
+          },
+        ],
+        subtitle
+      );
+      toast('Visitor report downloaded');
+      return;
+    }
+
+    downloadPdfDocument(
+      'occupancy-summary-report',
+      'BSMS Occupancy Summary',
+      [
+        {
+          heading: 'Occupancy Overview',
+          lines: [
+            `Total flats: ${flats.length}`,
+            `Occupied flats: ${flats.filter((flat) => flat.status === 'occupied').length}`,
+            `Vacant flats: ${flats.filter((flat) => flat.status === 'vacant').length}`,
+            `Maintenance flats: ${flats.filter((flat) => flat.status === 'maintenance').length}`,
+            `Active tenants: ${tenants.filter((tenant) => tenant.status === 'active').length}`,
+          ],
+        },
+        {
+          heading: 'Flat Breakdown',
+          lines: flats.map((flat) => `Flat ${flat.number} | Floor ${flat.floor} | ${flat.status} | Owner: ${flat.ownerName || 'Unassigned'} | Tenant: ${flat.tenantName || 'Unassigned'}`),
+        },
+      ],
+      `Generated from dashboard data on ${new Date().toLocaleDateString('en-BD')}`
+    );
+    toast('Occupancy report downloaded');
+  };
 
   const serviceRevenue = payments.filter(p => p.recipient === 'admin' && p.status === 'paid').reduce((a, p) => a + p.amount, 0);
   const totalRent = payments.filter(p => p.recipient === 'owner' && p.status === 'paid').reduce((a, p) => a + p.amount, 0);
@@ -72,7 +186,7 @@ export default function AdminReports() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} />
                 <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={v => `৳${v/1000}k`} />
-                <Tooltip formatter={(v: any) => formatCurrency(v)} contentStyle={{ borderRadius: '12px' }} />
+                <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ borderRadius: '12px' }} />
                 <Legend />
                 <Bar dataKey="rent" name="Rent" fill="#6366f1" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="service" name="Service" fill="#10b981" radius={[4, 4, 0, 0]} />

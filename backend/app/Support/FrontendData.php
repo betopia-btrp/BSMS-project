@@ -16,13 +16,21 @@ class FrontendData
 {
     public static function user(User $user): array
     {
+        $tenantProfile = $user->tenantProfile;
+
         return [
             'id' => (string) $user->id,
             'name' => $user->name,
             'email' => $user->email,
             'role' => $user->role,
             'phone' => $user->phone,
-            'flatId' => optional(optional($user->tenantProfile)->flat)->id ? (string) $user->tenantProfile->flat->id : null,
+            'flatId' => optional(optional($tenantProfile)->flat)->id ? (string) $tenantProfile->flat->id : null,
+            'flatNumber' => $tenantProfile?->flat?->number,
+            'nid' => $tenantProfile?->national_id,
+            'emergencyContact' => $tenantProfile?->emergency_contact,
+            'moveInDate' => $tenantProfile?->move_in_date?->format('Y-m-d'),
+            'status' => $tenantProfile ? ($tenantProfile->is_active ? 'active' : 'inactive') : null,
+            'isVerified' => $user->is_verified,
             'createdAt' => $user->created_at?->toISOString(),
         ];
     }

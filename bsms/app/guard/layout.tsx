@@ -13,13 +13,15 @@ const pageTitles: Record<string, string> = {
 export default function GuardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, hasHydrated } = useAuthStore();
 
   useEffect(() => {
+    if (!hasHydrated) return;
     if (!isAuthenticated || !user) { router.replace('/login'); return; }
     if (user.role !== 'guard') { router.replace('/' + user.role + '/dashboard'); }
-  }, [isAuthenticated, user, router]);
+  }, [hasHydrated, isAuthenticated, user, router]);
 
+  if (!hasHydrated) return null;
   if (!isAuthenticated || !user || user.role !== 'guard') return null;
   return <DashboardLayout title={pageTitles[pathname] || 'Guard Portal'}>{children}</DashboardLayout>;
 }

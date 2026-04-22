@@ -8,20 +8,22 @@ use App\Http\Controllers\Api\MaintenanceTicketController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\TenantController;
+use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\VisitorController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
-Route::post('/register', [AuthController::class, 'register']);
 
 Route::middleware('auth.token')->group(function (): void {
     Route::get('/me', [AuthController::class, 'me']);
+    Route::patch('/me', [AuthController::class, 'updateProfile']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
     Route::get('/bootstrap', [AppDataController::class, 'index']);
 
     Route::apiResource('flats', FlatController::class)->except(['create', 'edit']);
     Route::apiResource('tenants', TenantController::class)->except(['create', 'edit']);
+    Route::apiResource('users', UserController::class)->except(['create', 'edit', 'show']);
     Route::apiResource('payments', PaymentController::class)->only(['index', 'store']);
     Route::patch('/payments/{payment}/status', [PaymentController::class, 'updateStatus']);
 

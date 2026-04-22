@@ -1,19 +1,41 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useToast } from '@/components/ToastProvider';
 import { Card, CardHeader, CardBody, Button, Input } from '@/components/ui';
 import { User, Lock, Bell, Shield } from 'lucide-react';
 
 export default function SettingsPage() {
-  const { user } = useAuthStore();
+  const { user, updateProfile, isLoading } = useAuthStore();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('profile');
   const [profile, setProfile] = useState({ name: user?.name || '', email: user?.email || '', phone: user?.phone || '' });
   const [passwords, setPasswords] = useState({ current: '', newPw: '', confirm: '' });
   const [notifs, setNotifs] = useState({ payments: true, maintenance: true, visitors: true, announcements: true, email: false });
 
-  const handleSaveProfile = () => toast('Profile updated successfully');
+  useEffect(() => {
+    setProfile({ name: user?.name || '', email: user?.email || '', phone: user?.phone || '' });
+  }, [user]);
+
+  const handleSaveProfile = async () => {
+    if (!profile.name.trim() || !profile.email.trim()) {
+      toast('Name and email are required', 'error');
+      return;
+    }
+
+    const result = await updateProfile({
+      name: profile.name.trim(),
+      email: profile.email.trim(),
+      phone: profile.phone.trim(),
+    });
+
+    if (result.success) {
+      toast('Profile updated successfully');
+      return;
+    }
+
+    toast(result.error || 'Profile update failed', 'error');
+  };
   const handleChangePassword = () => {
     if (!passwords.current || !passwords.newPw) { toast('Fill all password fields', 'error'); return; }
     if (passwords.newPw !== passwords.confirm) { toast('Passwords do not match', 'error'); return; }
@@ -61,7 +83,7 @@ export default function SettingsPage() {
             <Input label="Email Address" type="email" value={profile.email} onChange={e => setProfile(p => ({ ...p, email: e.target.value }))} />
             <Input label="Phone Number" value={profile.phone} onChange={e => setProfile(p => ({ ...p, phone: e.target.value }))} />
             <div className="pt-2">
-              <Button onClick={handleSaveProfile}>Save Changes</Button>
+              <Button onClick={handleSaveProfile} disabled={isLoading}>{isLoading ? 'Saving...' : 'Save Changes'}</Button>
             </div>
           </CardBody>
         </Card>

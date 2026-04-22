@@ -3,7 +3,10 @@
 return [
     'paths' => ['api/*', 'up'],
     'allowed_methods' => ['*'],
-    'allowed_origins' => [env('FRONTEND_URL', 'http://localhost:3000')],
+    'allowed_origins' => array_filter(array_map('trim', explode(',', (string) env(
+        'FRONTEND_URLS',
+        env('FRONTEND_URL', 'http://localhost:3000').',http://127.0.0.1:3000'
+    )))),
     'allowed_origins_patterns' => [],
     'allowed_headers' => ['*'],
     'exposed_headers' => [],
