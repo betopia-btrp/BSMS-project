@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAppStore } from '@/lib/store/appStore';
 import { useToast } from '@/components/ToastProvider';
 import { Card, Button, Input, Select, Modal, Badge, Table, Th, Td, EmptyState } from '@/components/ui';
@@ -30,11 +30,17 @@ export default function AdminTenants() {
 
   const handleSave = () => {
     if (!form.name || !form.phone || !form.nid) { toast('Please fill required fields', 'error'); return; }
+    const selectedFlat = flats.find(flat => flat.id === form.flatId);
+    const tenantData = {
+      ...form,
+      flatNumber: selectedFlat?.number || '',
+    };
+
     if (editTenant) {
-      updateTenant(editTenant.id, form);
+      updateTenant(editTenant.id, tenantData);
       toast('Tenant updated');
     } else {
-      addTenant({ ...form, userId: `u${Date.now()}` });
+      addTenant({ ...tenantData, userId: `u${Date.now()}` });
       toast('Tenant added successfully');
     }
     setShowModal(false);
@@ -45,9 +51,22 @@ export default function AdminTenants() {
   };
 
   const f = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setForm(prev => ({ ...prev, [k]: e.target.value }));
+    setForm(prev => {
+      if (k !== 'flatId') return { ...prev, [k]: e.target.value };
 
-  const vacantFlats = flats.filter(f => f.status === 'vacant' || f.id === form.flatId);
+      const selectedFlat = flats.find(flat => flat.id === e.target.value);
+      return { ...prev, flatId: e.target.value, flatNumber: selectedFlat?.number || '' };
+    });
+
+  const assignableFlats = useMemo(() => {
+    const flatIdsUsedByOtherTenants = new Set(
+      tenants
+        .filter(tenant => tenant.id !== editTenant?.id && tenant.flatId)
+        .map(tenant => tenant.flatId)
+    );
+
+    return flats.filter(flat => !flatIdsUsedByOtherTenants.has(flat.id) || flat.id === form.flatId);
+  }, [editTenant?.id, flats, form.flatId, tenants]);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -128,7 +147,7 @@ export default function AdminTenants() {
             <Input label="Move-in Date" type="date" value={form.moveInDate} onChange={f('moveInDate')} />
           </div>
           <Select label="Assign Flat" value={form.flatId || ''} onChange={f('flatId')}
-            options={[{ value: '', label: 'Select flat...' }, ...vacantFlats.map(fl => ({ value: fl.id, label: `${fl.number} (Floor ${fl.floor})` }))]} />
+            options={[{ value: '', label: 'No flat assigned' }, ...assignableFlats.map(fl => ({ value: fl.id, label: `${fl.number} (Floor ${fl.floor})` }))]} />
           <Select label="Status" value={form.status} onChange={f('status')} options={[{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]} />
           <div className="flex gap-3 pt-2">
             <Button variant="secondary" onClick={() => setShowModal(false)} className="flex-1">Cancel</Button>

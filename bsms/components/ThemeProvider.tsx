@@ -5,13 +5,14 @@ type Theme = 'light' | 'dark';
 const ThemeContext = createContext<{ theme: Theme; toggle: () => void }>({ theme: 'light', toggle: () => {} });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('light');
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === 'undefined') return 'light';
 
-  useEffect(() => {
-    const stored = localStorage.getItem('bsms-theme') as Theme;
-    if (stored) setTheme(stored);
-    else if (window.matchMedia('(prefers-color-scheme: dark)').matches) setTheme('dark');
-  }, []);
+    const stored = localStorage.getItem('bsms-theme');
+    if (stored === 'light' || stored === 'dark') return stored;
+
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');

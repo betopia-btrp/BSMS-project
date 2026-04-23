@@ -92,6 +92,8 @@ class TenantController extends Controller
 
         DB::transaction(function () use ($tenant, $data) {
             $oldFlat = $tenant->flat;
+            $newFlat = array_key_exists('flatId', $data) && $data['flatId'] ? Flat::find($data['flatId']) : null;
+
             $tenant->user->update([
                 'name' => $data['name'] ?? $tenant->user->name,
                 'email' => $data['email'] ?? $tenant->user->email,
@@ -103,6 +105,7 @@ class TenantController extends Controller
                 'national_id' => $data['nid'] ?? $tenant->national_id,
                 'emergency_contact' => $data['emergencyContact'] ?? $tenant->emergency_contact,
                 'move_in_date' => $data['moveInDate'] ?? $tenant->move_in_date,
+                'monthly_rent' => array_key_exists('flatId', $data) ? $newFlat?->monthly_rent : $tenant->monthly_rent,
                 'is_active' => ($data['status'] ?? ($tenant->is_active ? 'active' : 'inactive')) === 'active',
             ]);
 

@@ -72,7 +72,7 @@ class FlatController extends Controller
             'number' => $data['number'] ?? $flat->number,
             'floor' => $data['floor'] ?? $flat->floor,
             'size_sqft' => array_key_exists('size', $data) ? $this->extractSize($data['size']) : $flat->size_sqft,
-            'owner_id' => $data['ownerId'] ?? $flat->owner_id,
+            'owner_id' => array_key_exists('ownerId', $data) ? $data['ownerId'] : $flat->owner_id,
             'status' => $data['status'] ?? $flat->status,
             'monthly_rent' => $data['monthlyRent'] ?? $flat->monthly_rent,
         ])->save();

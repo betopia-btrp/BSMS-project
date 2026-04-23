@@ -13,6 +13,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <head>
         <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                try {
+                  var stored = localStorage.getItem('bsms-theme');
+                  var theme = stored === 'light' || stored === 'dark'
+                    ? stored
+                    : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
+                  document.documentElement.classList.toggle('dark', theme === 'dark');
+                } catch (error) {}
+              })();
+            `,
+          }}
+        />
       </head>
       <body style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}>
         <ThemeProvider>

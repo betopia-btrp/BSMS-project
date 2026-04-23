@@ -1,25 +1,48 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAppStore } from '@/lib/store/appStore';
+import { useAuthStore } from '@/lib/store/authStore';
 import { useToast } from '@/components/ToastProvider';
 import { Card, Button, Input, Select, Modal, Badge, Table, Th, Td, EmptyState } from '@/components/ui';
 import { Plus, Edit2, Trash2, Building2, Search, UserPlus } from 'lucide-react';
 import { formatCurrency, getStatusColor } from '@/lib/utils';
-import { Flat } from '@/types';
+import { apiRequest } from '@/lib/api/client';
+import { Flat, User } from '@/types';
 
 const emptyFlat: Omit<Flat, 'id' | 'createdAt'> = { number: '', floor: 1, size: '', ownerId: '', ownerName: '', status: 'vacant', monthlyRent: 0 };
 
 export default function AdminFlats() {
   const { flats, addFlat, updateFlat, deleteFlat, tenants, updateTenant } = useAppStore();
+  const token = useAuthStore(state => state.token);
   const { toast } = useToast();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [editFlat, setEditFlat] = useState<Flat | null>(null);
   const [form, setForm] = useState(emptyFlat);
+  const [users, setUsers] = useState<User[]>([]);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignFlatId, setAssignFlatId] = useState('');
   const [assignTenantId, setAssignTenantId] = useState('');
+
+  useEffect(() => {
+    if (!token) return;
+
+    void apiRequest<User[]>('/users', { token })
+      .then(setUsers)
+      .catch(() => toast('Failed to load owner list', 'error'));
+  }, [token, toast]);
+
+  const ownerOptions = useMemo(() => {
+    const owners = users.filter(user => user.role === 'owner');
+    const hasCurrentOwner = form.ownerId && owners.some(owner => owner.id === form.ownerId);
+
+    return [
+      { value: '', label: 'No owner assigned' },
+      ...owners.map(owner => ({ value: owner.id, label: `${owner.name} (${owner.email})` })),
+      ...(hasCurrentOwner || !form.ownerId ? [] : [{ value: form.ownerId, label: form.ownerName || 'Current owner' }]),
+    ];
+  }, [form.ownerId, form.ownerName, users]);
 
   const filtered = flats.filter(f =>
     (statusFilter === 'all' || f.status === statusFilter) &&
@@ -55,6 +78,17 @@ export default function AdminFlats() {
 
   const f = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm(prev => ({ ...prev, [k]: k === 'floor' || k === 'monthlyRent' ? Number(e.target.value) : e.target.value }));
+
+  const handleOwnerChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const ownerId = e.target.value;
+    const owner = users.find(user => user.id === ownerId);
+
+    setForm(prev => ({
+      ...prev,
+      ownerId,
+      ownerName: owner?.name || '',
+    }));
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -151,7 +185,7 @@ export default function AdminFlats() {
             <Input label="Size *" value={form.size} onChange={f('size')} placeholder="1200 sqft" />
             <Input label="Monthly Rent (৳)" type="number" value={form.monthlyRent} onChange={f('monthlyRent')} />
           </div>
-          <Input label="Owner Name" value={form.ownerName} onChange={f('ownerName')} placeholder="Mr. Karim" />
+          <Select label="Flat Owner" value={form.ownerId || ''} onChange={handleOwnerChange} options={ownerOptions} />
           <Select label="Status" value={form.status} onChange={f('status')} options={[
             { value: 'vacant', label: 'Vacant' },
             { value: 'occupied', label: 'Occupied' },

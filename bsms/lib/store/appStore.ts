@@ -61,7 +61,7 @@ type BootstrapPayload = {
 };
 
 const withToken = () => useAuthStore.getState().token;
-const toNumericId = (value?: string | number | null) => value !== undefined && value !== null && value !== '' ? Number(value) : undefined;
+const toNumericId = (value?: string | number | null) => value !== undefined && value !== null && value !== '' ? Number(value) : null;
 
 export const useAppStore = create<AppStore>((set) => ({
   flats: [],
@@ -121,24 +121,65 @@ export const useAppStore = create<AppStore>((set) => ({
       body: { ...tenant, flatId: toNumericId(tenant.flatId) },
       token: withToken(),
     })
-      .then(saved => set(s => ({ tenants: [...s.tenants, saved] })))
+      .then(saved => set(s => ({
+        tenants: [...s.tenants, saved],
+        flats: s.flats.map(flat => flat.id === saved.flatId ? { ...flat, status: 'occupied', tenantId: saved.userId, tenantName: saved.name } : flat),
+      })))
       .catch(() => undefined);
   },
   updateTenant: (id, data) => {
-    const previous = useAppStore.getState().tenants;
-    set(s => ({ tenants: s.tenants.map(t => t.id === id ? { ...t, ...data } : t) }));
+    const previous = useAppStore.getState();
+    const previousTenant = previous.tenants.find(tenant => tenant.id === id);
+    const nextFlatId = data.flatId !== undefined ? data.flatId : previousTenant?.flatId;
+    const nextTenantName = data.name || previousTenant?.name;
+
+    set(s => ({
+      tenants: s.tenants.map(t => t.id === id ? { ...t, ...data } : t),
+      flats: s.flats.map(flat => {
+        if (previousTenant?.flatId && flat.id === previousTenant.flatId && previousTenant.flatId !== nextFlatId) {
+          return { ...flat, status: 'vacant', tenantId: undefined, tenantName: undefined };
+        }
+
+        if (nextFlatId && flat.id === nextFlatId) {
+          return { ...flat, status: 'occupied', tenantId: previousTenant?.userId, tenantName: nextTenantName };
+        }
+
+        return flat;
+      }),
+    }));
+
     void apiRequest<Tenant>(`/tenants/${id}`, {
       method: 'PATCH',
       body: { ...data, flatId: toNumericId(data.flatId) },
       token: withToken(),
     })
-      .then(saved => set(s => ({ tenants: s.tenants.map(item => item.id === id ? saved : item) })))
-      .catch(() => set({ tenants: previous }));
+      .then(saved => set(s => ({
+        tenants: s.tenants.map(item => item.id === id ? saved : item),
+        flats: s.flats.map(flat => {
+          const savedFlatId = saved.flatId || undefined;
+
+          if (previousTenant?.flatId && flat.id === previousTenant.flatId && previousTenant.flatId !== savedFlatId) {
+            return { ...flat, status: 'vacant', tenantId: undefined, tenantName: undefined };
+          }
+
+          if (savedFlatId && flat.id === savedFlatId) {
+            return { ...flat, status: 'occupied', tenantId: saved.userId, tenantName: saved.name };
+          }
+
+          return flat;
+        }),
+      })))
+      .catch(() => set({ tenants: previous.tenants, flats: previous.flats }));
   },
   deleteTenant: (id) => {
-    const previous = useAppStore.getState().tenants;
-    set(s => ({ tenants: s.tenants.filter(t => t.id !== id) }));
-    void apiRequest(`/tenants/${id}`, { method: 'DELETE', token: withToken() }).catch(() => set({ tenants: previous }));
+    const previous = useAppStore.getState();
+    const tenant = previous.tenants.find(item => item.id === id);
+
+    set(s => ({
+      tenants: s.tenants.filter(t => t.id !== id),
+      flats: s.flats.map(flat => flat.id === tenant?.flatId ? { ...flat, status: 'vacant', tenantId: undefined, tenantName: undefined } : flat),
+    }));
+    void apiRequest(`/tenants/${id}`, { method: 'DELETE', token: withToken() }).catch(() => set({ tenants: previous.tenants, flats: previous.flats }));
   },
 
   addPayment: (payment) => {
